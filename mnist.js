@@ -7,75 +7,99 @@ const path_labelsTrain = __dirname + '/data/MNIST-train-labels.idx1-ubyte';
 
 module.exports = class Mnist {
 
-    constructor() {
-        //train set
-        let trainImages = parseContent_images(fs.readFileSync(path_imagesTrain, 'utf-8'));
-        let trainLabels = parseContent_labels(fs.readFileSync(path_labelsTrain, 'utf-8'));
-        this.train = {
-            rows: trainImages.rows,
-            cols: trainImages.cols,
+        constructor() {
+            //train set
+            let trainImages = parseContent_images(fs.readFileSync(path_imagesTrain, 'binary'));
+            let trainLabels = parseContent_labels(fs.readFileSync(path_labelsTrain, 'binary'));
+            this.train = {
+                rows: trainImages.rows,
+                cols: trainImages.cols,
+            }
+            this.train.images = [];
+            for (let i = 0; i < trainImages.images.length; i++) {
+                this.train.images.push({
+                    pixels: trainImages.images[i],
+                    number: trainLabels[i]
+                });
+            }
+
+            //test set
+            let testImages = parseContent_images(fs.readFileSync(path_imagesTest, 'binary'));
+            let testLabels = parseContent_labels(fs.readFileSync(path_labelsTest, 'binary'));
+            this.test = {
+                rows: testImages.rows,
+                cols: testImages.cols,
+            }
+            this.test.images = [];
+            for (let i = 0; i < testImages.images.length; i++) {
+                this.test.images.push({
+                    pixels: testImages.images[i],
+                    number: testLabels[i]
+                });
+            }
         }
-        this.train.images = [];
-        for (let i = 0; i < trainImages.images.length; i++) {
-            this.train.images.push({
-                pixels: trainImages.images[i],
-                number: trainLabels[i]
-            });
+
+        getRowNb() {
+            return this.train.rows; //equal to this.test.rows
         }
 
-        //test set
-        let testImages = parseContent_images(fs.readFileSync(path_imagesTest, 'utf-8'));
-        let testLabels = parseContent_labels(fs.readFileSync(path_labelsTest, 'utf-8'));
-        this.test = {
-            rows: testImages.rows,
-            cols: testImages.cols,
+        getColNb() {
+            return this.train.cols; //equal to this.test.cols
         }
-        this.test.images = [];
-        for (let i = 0; i < testImages.images.length; i++) {
-            this.test.images.push({
-                pixels: testImages.images[i],
-                number: testLabels[i]
-            });
+
+        getAllImages(mode) {
+            let target = mode == 'train' ? this.train.images : this.test.images;
+            return target;
         }
-    }
-}
 
-function parseContent_images(content) {
-    //according to documentation at http://yann.lecun.com/exdb/mnist/
-    let imagesCount = u.fromBitToInteger(content.substring(4, 8));
-    if(imagesCount == 16776544) imagesCount = 60000; //somehow fs does not read the 6th char of the file correctly (got 65533 instead of 234)
-    let rows = u.fromBitToInteger(content.substring(8, 12));
-    let cols = u.fromBitToInteger(content.substring(12, 16));
+        getAllImagesOf(mode, nb) {
+            let target = mode == 'train' ? this.train.images : this.test.images;
+            return target.filter(i => i.number == nb).map(i => i.pixels)
+        }
 
-    let pixelNb = rows * cols;
-    let cursor = 16;
+        getImagesShuffled(mode) {
+            let target = mode == 'train' ? this.train.images : this.test.images;
+            let toReturn = [];
+            target.forEach(image => toReturn.splice(Math.round(Math.rand() * toReturn.length), 0, image));
+                return toReturn;
+            }
+        }
 
-    let images = [];
-    for (let i = 0; i < imagesCount; i++) {
-        images.push(content.substring(cursor, cursor + pixelNb));
-        cursor += pixelNb;
-    }
+        function parseContent_images(content) {
+            //according to documentation at http://yann.lecun.com/exdb/mnist/
+            let imagesCount = u.fromBitToInteger(content.substring(4, 8));
+            let rows = u.fromBitToInteger(content.substring(8, 12));
+            let cols = u.fromBitToInteger(content.substring(12, 16));
 
-    return {
-        images: images,
-        rows: rows,
-        cols: cols
-    };
-}
+            let pixelNb = rows * cols;
+            let cursor = 16;
 
-function parseContent_labels(content) {
-    //according to documentation at http://yann.lecun.com/exdb/mnist/
-    let labelsCount = u.fromBitToInteger(content.substring(4, 8));
-    if(labelsCount == 16776544) labelsCount = 60000; //somehow fs does not read the 6th char of the file correctly (got 65533 instead of 234)
+            let images = [];
+            for (let i = 0; i < imagesCount; i++) {
+                images.push(content.substring(cursor, cursor + pixelNb));
+                cursor += pixelNb;
+            }
 
-    let cursor = 8;
+            return {
+                images: images,
+                rows: rows,
+                cols: cols
+            };
+        }
 
-    let labels = [];
-    let index = 0;
-    for (let i = 0; i < labelsCount; i++) {
-        index = cursor + i;
-        labels.push(u.fromBitToInteger(content.substring(index, index + 1)));
-    }
+        function parseContent_labels(content) {
+            //according to documentation at http://yann.lecun.com/exdb/mnist/
+            let labelsCount = u.fromBitToInteger(content.substring(4, 8));
+            if (labelsCount == 16776544) labelsCount = 60000; //somehow fs does not read the 6th char of the file correctly (got 65533 instead of 234)
 
-    return labels;
-}
+            let cursor = 8;
+
+            let labels = [];
+            let index = 0;
+            for (let i = 0; i < labelsCount; i++) {
+                index = cursor + i;
+                labels.push(u.fromBitToInteger(content.substring(index, index + 1)));
+            }
+
+            return labels;
+        }

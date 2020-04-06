@@ -1,7 +1,8 @@
 module.exports = {
-    fromBitToInteger: fromBitToInteger
+    fromBitToInteger:fromBitToInteger
 }
 
+//transform a string into an integer. Each char is taken as his code
 function fromBitToInteger(str) {
     let integer = 0;
     let arr_b256 = str.split('').map(char => char.charCodeAt(0));
